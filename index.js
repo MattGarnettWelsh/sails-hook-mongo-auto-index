@@ -10,8 +10,9 @@ module.exports = function mongoAutoIndexHook(sails) {
       if (modelKey == 'archive')
         return;
 
-      mongodb = sails.config.datastores.default.adapter.mongodb
-      if(typeof mongodb !== 'undefined' && mongodb !== null){
+      adapter = model._adapter.identity;
+
+      if (adapter !== 'sails-mongo') {
         sails.log.verbose('sails-hook-mongo-auto-index: ' + 'skipping model ' + modelKey + ', not a sails-mongo model');
         return;
       }

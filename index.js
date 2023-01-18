@@ -1,45 +1,61 @@
-let _ = require("lodash");
 let async = require("async");
 
 module.exports = function mongoAutoIndexHook(sails) {
     function getIndexesFromModels() {
         let indexes = [];
 
-        _.forIn(sails.models, (model, modelKey) => {
-            if (modelKey == "archive") return;
+        // for in loop over sails.models
+        for (const key in sails.models) {
+            if (Object.hasOwnProperty.call(sails.models, key)) {
+                const model = sails.models[key];
 
-            adapter = model._adapter.identity;
+                if (key == "archive") return;
 
-            // prettier-ignore
-            if (adapter !== "sails-mongo") {
-                sails.log.verbose(`sails-hook-mongo-auto-index: skipping model ${modelKey}, not a sails-mongo model`);
-                return;
+                adapter = model._adapter.identity;
+
+                if (adapter !== "sails-mongo") {
+                    sails.log.verbose(
+                        `sails-hook-mongo-auto-index: skipping model ${key}, not a sails-mongo model`
+                    );
+                    return;
+                }
+
+                for (const attributeKey in model.attributes) {
+                    if (
+                        Object.hasOwnProperty.call(
+                            model.attributes,
+                            attributeKey
+                        )
+                    ) {
+                        const attribute = model.attributes[attributeKey];
+
+                        if (attributeKey == "id") return;
+
+                        org = attribute.autoMigrations;
+
+                        if (
+                            typeof org !== "undefined" && org !== null
+                                ? org.unique
+                                : void 0
+                        ) {
+                            indexes.push({
+                                model: model,
+                                attributeKey: attributeKey,
+                                unique: true,
+                            });
+                        }
+
+                        if (attribute.index === true) {
+                            indexes.push({
+                                model: model,
+                                attributeKey: attributeKey,
+                                unique: false,
+                            });
+                        }
+                    }
+                }
             }
-
-            _.forIn(model.attributes, (attribute, attributeKey) => {
-                if (attributeKey == "id") return;
-                org = attribute.autoMigrations;
-                if (
-                    typeof org !== "undefined" && org !== null
-                        ? org.unique
-                        : void 0
-                ) {
-                    indexes.push({
-                        model: model,
-                        attributeKey: attributeKey,
-                        unique: true,
-                    });
-                }
-
-                if (attribute.index === true) {
-                    indexes.push({
-                        model: model,
-                        attributeKey: attributeKey,
-                        unique: false,
-                    });
-                }
-            });
-        });
+        }
 
         return indexes;
     }
